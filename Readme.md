@@ -13,7 +13,7 @@ $ run main.py --server.port=8080
 ```
 
 
-or using [docker](https://www.section.io/engineering-education/how-to-deploy-streamlit-app-with-docker/:
+or using [docker](https://www.section.io/engineering-education/how-to-deploy-streamlit-app-with-docker/):
 
 ```bash
 $ docker build -t bone_age_streamlit:latest .
