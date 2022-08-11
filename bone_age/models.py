@@ -18,7 +18,7 @@ from bone_age.effNet import EfficientNet
 
 
 class Predictor:
-    def __init__(self):
+    def __init__(self, use_cuda=False):
         self.models = {
             "masked_effnet_super_shallow_fancy_aug": EfficientModel(
                 "efficientnet-b0",
@@ -41,12 +41,19 @@ class Predictor:
         self.mask_crop_size = 1.15
         self.data_aug = self.get_inference_augmentation()
         self.data_aug_highRes = self.get_inference_augmentation(height=1024, width=1024)
+        self.device = "cpu"
+        if use_cuda:
+            for model in self.models.values():
+                model.cuda()
+            self.device = next(next(iter(self.models.values())).parameters()).device
 
     def __call__(self, image, male, mask=None) -> float:
         images = self._preprocess_image(image, mask)
-        norm_image = images[0].to(torch.float32).unsqueeze(dim=0)
-        high_res_image = images[1].to(torch.float32).unsqueeze(dim=0)
-        male = torch.Tensor([[male]])
+        target = torch.float32  # if self.device == "cpu" else torch.float16
+
+        high_res_image = images.pop().to(target).unsqueeze(dim=0).to(self.device)
+        norm_image = images.pop().to(target).unsqueeze(dim=0).to(self.device)
+        male = torch.Tensor([[male]]).to(target).to(self.device)
 
         y_hats = {}
         with torch.no_grad():

@@ -1,10 +1,7 @@
 """
 Based on https://github.com/Joshmantova/Eagle-Vision/
 """
-
-
 import cv2
-import yaml
 from PIL import Image
 import os
 import torch
@@ -13,7 +10,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-from fscnn.models import MaskModel
+from fscnn.lib.models import MaskModel
 from fscnn.predict import Predictor as MaskPredictor
 from bone_age.models import Predictor as AgePredictor
 
@@ -24,13 +21,21 @@ def load_fscnn(path: str = "./models/fscnn_cos.ckpt") -> MaskModel:
 
 
 @st.cache()
-def load_age_model(path: str = "./models/fscnn_cos.ckpt") -> MaskModel:
-    return AgePredictor()
+def load_age_model(use_cuda=False) -> MaskModel:
+    return AgePredictor(use_cuda=use_cuda)
 
 
 if __name__ == "__main__":
     mask_predictor = load_fscnn()
     age_predictor = load_age_model()
+
+    if torch.cuda.is_available():
+        if st.checkbox("use GPU"):
+            st.write("Inference on GPU")
+            age_predictor = load_age_model(use_cuda=True)
+        else:
+            st.write("Inference on CPU")
+            age_predictor = load_age_model(use_cuda=False)
 
     st.title("Bone age prediction model")
 
