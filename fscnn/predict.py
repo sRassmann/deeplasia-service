@@ -5,8 +5,8 @@ import os
 from glob import glob
 import matplotlib.pyplot as plt
 
-from lib.models import *
-from lib.datasets import *
+from fscnn.lib.models import *
+from fscnn.lib.datasets import *
 from tqdm import tqdm
 
 from argparse import ArgumentParser
@@ -26,11 +26,10 @@ class Predictor:
         self.size = size
         self.aug = MaskModule.get_inference_aug(size)
 
-    def __call__(self, img_path: str) -> np.array:
+    def __call__(self, raw_image) -> np.array:
         """
         provide a path to an image and the predictor return the extracted hand contour
         """
-
         h, w = raw_image.shape
         if h > w:
             y = 0
@@ -62,13 +61,13 @@ class Predictor:
         conts = sorted(conts, key=lambda x: cv2.contourArea(x), reverse=True)
         hand = None
         for c in conts:  # extract the largest area containing high confidence
-            pred = cv2.drawContours(np.zeros_like(raw_prediction), [c], -1, 255, -1)
+            pred = cv2.drawContours(np.zeros_like(raw_prediction), [c], -1, 1, -1)
             if np.any(pred * (raw_prediction > 0.99)):
                 hand = pred
                 break
         if hand is None:
             c = conts[0]
-            hand = cv2.drawContours(np.zeros_like(raw_prediction), [c], -1, 255, -1)
+            hand = cv2.drawContours(np.zeros_like(raw_prediction), [c], -1, 1, -1)
         hand = hand.astype(np.uint8)
         org_image = (
             org_image / (cv2.bitwise_or(org_image, org_image, mask=hand).max()) * 230

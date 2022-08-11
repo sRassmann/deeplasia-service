@@ -8,13 +8,13 @@ import torch
 import torchmetrics
 from scipy.special import softmax
 from time import time
-from fscnn.modules.losses import CombinedLoss
+from fscnn.lib.modules.losses import CombinedLoss
 
-from fscnn.models import *
+from fscnn.lib.models import *
 import matplotlib.pyplot as plt
 
 from torch import nn
-from fscnn import sub_module as sm
+from fscnn.lib import sub_module as sm
 
 
 class MaskModel(pl.LightningModule):
