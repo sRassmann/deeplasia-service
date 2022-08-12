@@ -77,16 +77,16 @@ if __name__ == "__main__":
     torch.set_num_threads(args.n_threads)
 
     if torch.cuda.is_available() and args.use_cuda:
-        if st.checkbox("use GPU"):
-            st.write("Inference on GPU")
+        if st.checkbox("use GPU (experimental for prediction speed up)"):
+            st.write("Inference on GPU (fast)")
             age_predictor = load_age_model(use_cuda=True)
         else:
-            st.write("Inference on CPU")
+            st.write("Inference on CPU (slow)")
             age_predictor = load_age_model(use_cuda=False)
 
     st.title("Bone age prediction model")
 
-    file = st.file_uploader("Upload An Image")
+    file = st.file_uploader("Upload an image (png or jpg)")
 
     if file:
         img = np.array(Image.open(file))
@@ -120,7 +120,7 @@ if __name__ == "__main__":
                         img, mask=mask, mask_crop=-1 if no_crop else 1.15
                     )
                 sex = int(sex > 0.5)
-                st.write(f"Predicted to be {'male' if sex else 'female'}")
+                st.write(f"Predicted to be **{'male' if sex else 'female'}**")
             else:
                 sex = 1 if sex == "Male" else 0
 
@@ -132,4 +132,8 @@ if __name__ == "__main__":
             st.title(f"Predicted age:")
             st.title(f"{age:.2f} months ({age / 12:.2f} years )")
 
-            st.write(stats.to_html(escape=False), unsafe_allow_html=True)
+            with st.expander("See details"):
+                st.write(
+                    stats.to_html(escape=False, float_format="{:20,.2f}".format),
+                    unsafe_allow_html=True,
+                )
