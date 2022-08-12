@@ -13,29 +13,16 @@ import yaml
 from albumentations.pytorch import ToTensorV2
 import albumentations as A
 import pandas as pd
+import pytorch_lightning as pl
 
 from bone_age.effNet import EfficientNet
 
 
 class Predictor:
-    def __init__(self, use_cuda=False):
-        self.models = {
-            "masked_effnet_super_shallow_fancy_aug": EfficientModel(
-                "efficientnet-b0",
-                pretrained_path="./models/masked_effnet_super_shallow_fancy_aug.ckpt",
-                load_dense=True,
-            ).eval(),
-            "masked_effnet_supShal_highRes_fancy_aug": EfficientModel(
-                "efficientnet-b0",
-                pretrained_path="./models/masked_effnet_supShal_highRes_fancy_aug.ckpt",
-                load_dense=True,
-            ).eval(),
-            "masked_effnet-b4_shallow_pretr_fancy_aug": EfficientModel(
-                "efficientnet-b4",
-                pretrained_path="./models/masked_effnet-b4_shallow_pretr_fancy_aug.ckpt",
-                load_dense=True,
-            ).eval(),
-        }
+    def __init__(
+        self, ensemble, use_cuda=False,
+    ):
+        self.models = ensemble
         with open("./bone_age/parameters.yml", "r") as stream:
             self.params = yaml.safe_load(stream)
         self.data_aug = self.get_inference_augmentation()
@@ -161,6 +148,27 @@ class Predictor:
         return self.cor_prediction_bias(y_hat, slope, intercept)
 
 
+class SexPredictor(Predictor):
+    def __call__(self, image, mask_crop=1.15, mask=None) -> tuple:
+        images = self._preprocess_image(image, mask, mask_crop)
+        target = torch.float32  # if self.device == "cpu" else torch.float16
+
+        images.pop().to(target).unsqueeze(dim=0).to(self.device)
+        norm_image = images.pop().to(target).unsqueeze(dim=0).to(self.device)
+        male = torch.Tensor([[-1]]).to(target).to(self.device)  # ignored anyway
+
+        y_hats = {}
+        with torch.no_grad():
+            for name, model in self.models.items():
+                # if "highRes" in name:
+                #     age_hat, y_hat = model(high_res_image, male)
+                # else:
+                age_hat, y_hat = model(norm_image, male)
+                y_hats[name] = {"cor": torch.sigmoid(y_hat).item()}
+        stats = pd.DataFrame(y_hats).T
+        return stats.cor.mean(), stats
+
+
 class EfficientModel(nn.Module):
     def __init__(
         self,
@@ -264,3 +272,195 @@ class EfficientModel(nn.Module):
             for k, v in weight_dict["state_dict"].items()
             if key in k
         }
+
+
+class MultiTaskModel(pl.LightningModule):
+    """
+    Ptl CLI configurable Bone age model consisting of a backbone and dense network
+    """
+
+    def __init__(
+        self,
+        backbone: Union[str, bool] = "efficientnet-b0",
+        pretrained: Union[bool, str] = None,
+        dense_layers: List[int] = [256],
+        sex_dcs: int = 32,
+        explicit_sex_classifier: List[int] = None,
+        correct_predicted_sex: bool = False,
+        age_sigma: float = 1,
+        sex_sigma: float = 0,
+        learnable_sigma: bool = False,
+        dropout_p: float = 0.2,
+        batch_size: int = 32,  # linked
+        masked_input: bool = True,  # linked
+        input_size: List[int] = [1, 512, 512],  # linked
+        name: str = "name",  # linked
+        age_mean: float = 0,  # linked
+        age_std: float = 1,  # linked
+        img_norm_method: str = "zscore",
+        *args,
+        **kwargs,
+    ):
+        super(MultiTaskModel, self).__init__()
+        self.age_mean, self.age_std = (age_mean, age_std)
+
+        self.sex_sigma = sex_sigma
+        self.age_sigma = age_sigma
+
+        self._build_model(
+            backbone=backbone,
+            dense_layers=dense_layers,
+            sex_dcs=sex_dcs,
+            explicit_sex_classifier=explicit_sex_classifier,
+            correct_predicted_sex=correct_predicted_sex,
+            input_size=input_size,
+            pretrained=pretrained,
+            dropout_p=dropout_p,
+        )
+
+    def _build_model(
+        self,
+        backbone: str = "efficientnet-b0",
+        dense_layers: List[int] = [1024, 1024, 512, 512],
+        sex_dcs: int = 32,
+        explicit_sex_classifier: List[int] = [],
+        correct_predicted_sex: bool = False,
+        input_size=(1, 512, 512),
+        pretrained=False,
+        dropout_p: float = 0.2,
+        act_type="mem_eff",
+    ):
+        if "efficientnet" in backbone:
+            assert backbone in EfficientNet.VALID_MODELS
+            self.backbone = EfficientnetBackbone(
+                backbone=backbone, pretrained=pretrained, act_type=act_type
+            )
+
+        with torch.no_grad():
+            feature_dim = self.backbone.forward(torch.rand([1, *input_size])).shape[-1]
+
+        self.dense = DenseNetwork(
+            feature_dim,
+            dense_layers=dense_layers,
+            sex_dcs=sex_dcs,
+            explicit_sex_classifier=explicit_sex_classifier,
+            correct_sex=correct_predicted_sex,
+            dropout_p=dropout_p,
+        )
+
+    def forward(self, x, male):
+        features = self.backbone.forward(x)
+        age_hat, male_hat = self.dense(features, male)
+        return age_hat, male_hat
+
+
+class EfficientnetBackbone(nn.Module):
+    def __init__(
+        self,
+        n_channels=1,
+        pretrained=False,
+        backbone="efficientnet-b0",
+        *args,
+        **kwargs,
+    ):
+        """
+        Efficientnet based bone age model featuring a variable number of dense layers
+
+        Args:
+            n_channels: number of channels of the input image
+            pretrained: used pretrained backbone model
+            backbone: existing backbone model for faster instantiation
+            dense_layers: number of neurons in the dense layers
+        """
+        super(EfficientnetBackbone, self).__init__()
+        assert (
+            backbone in EfficientNet.VALID_MODELS
+        ), f"Given base model type ({backbone}) is invalid"
+        if pretrained:
+            assert (
+                backbone != "efficientnet-l2"
+            ), "'efficientnet-l2' does not currently have pretrained weights"
+            self.base = EfficientNet.EfficientNet.from_pretrained(
+                backbone, in_channels=n_channels
+            )
+        else:
+            self.base = EfficientNet.EfficientNet.from_name(
+                backbone, in_channels=n_channels
+            )
+        act_type = kwargs["act_type"] if "act_type" in kwargs.keys() else "mem_eff"
+        self.act = (
+            EfficientNet.Swish()
+            if act_type != "mem_eff"
+            else EfficientNet.MemoryEfficientSwish()
+        )
+        self.base._fc = None  # not used
+
+    def forward(self, x):
+        x = self.base.extract_features(x, return_residual=False)
+        x = torch.mean(x, dim=(2, 3))  # agnostic of the 3th and 4th dim (h,w)  # 1x1
+        return x
+
+
+class DenseNetwork(nn.Module):
+    def __init__(
+        self,
+        input_dim,
+        dense_layers,
+        sex_dcs,
+        explicit_sex_classifier,
+        correct_sex=True,
+        dropout_p=0.2,
+    ):
+        super(DenseNetwork, self).__init__()
+
+        self.dropout = nn.Dropout(p=dropout_p)
+        self.fc_gender_in = nn.Linear(1, sex_dcs)
+        self.act = nn.ReLU()
+        self.input_dim = input_dim
+        self.correct_sex = correct_sex
+
+        self.dense_blocks = nn.ModuleList()
+        channel_sizes_in = [self.input_dim + sex_dcs] + dense_layers
+        for idx in range(len(channel_sizes_in) - 1):
+            self.dense_blocks.append(
+                nn.Linear(
+                    in_features=channel_sizes_in[idx],
+                    out_features=channel_sizes_in[idx + 1],
+                )
+            )
+        self.fc_boneage = nn.Linear(channel_sizes_in[-1], 1)
+        self.fc_sex = nn.Linear(channel_sizes_in[-1], 1)
+
+        self.explicit_sex_classifier = None
+        if explicit_sex_classifier:
+            channel_sizes_in = [self.input_dim] + explicit_sex_classifier
+            self.explicit_sex_classifier = nn.ModuleList()
+            for idx in range(len(channel_sizes_in) - 1):
+                self.explicit_sex_classifier.append(
+                    nn.Linear(
+                        in_features=channel_sizes_in[idx],
+                        out_features=channel_sizes_in[idx + 1],
+                    )
+                )
+            self.fc_sex = nn.Linear(channel_sizes_in[-1], 1)
+
+    def forward(self, features, male):
+        if self.explicit_sex_classifier is not None:
+            sex_hat = features
+            for layer in self.explicit_sex_classifier:
+                sex_hat = self.act(self.dropout(layer(sex_hat)))
+            sex_hat = self.fc_sex(sex_hat)
+            male = (
+                male if self.correct_sex and male is not None else sex_hat.detach()
+            )  # detach because we want to have male as constant
+
+        male = self.act(self.fc_gender_in(male))
+        x = torch.cat([features, male], dim=-1)
+
+        for layer in self.dense_blocks:
+            x = self.act(self.dropout(layer(x)))
+        age_hat = self.fc_boneage(x)
+
+        if not self.explicit_sex_classifier:
+            sex_hat = self.fc_sex(x)
+        return age_hat, sex_hat

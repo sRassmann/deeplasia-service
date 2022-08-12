@@ -13,17 +13,49 @@ import argparse
 
 from fscnn.lib.models import MaskModel
 from fscnn.predict import Predictor as MaskPredictor
-from bone_age.models import Predictor as AgePredictor
+from bone_age.models import (
+    EfficientModel as BoneAgeModel,
+    Predictor as AgePredictor,
+    MultiTaskModel as SexModel,
+    SexPredictor,
+)
 
 
 @st.cache()
-def load_fscnn(path: str = "./models/fscnn_cos.ckpt") -> MaskModel:
+def load_fscnn(path: str = "./models/fscnn_cos.ckpt") -> MaskPredictor:
     return MaskPredictor(checkpoint=path)
 
 
 @st.cache()
-def load_age_model(use_cuda=False) -> MaskModel:
-    return AgePredictor(use_cuda=use_cuda)
+def load_age_model(use_cuda=False) -> AgePredictor:
+    ensemble = {
+        "masked_effnet_super_shallow_fancy_aug": BoneAgeModel(
+            "efficientnet-b0",
+            pretrained_path="./models/masked_effnet_super_shallow_fancy_aug.ckpt",
+            load_dense=True,
+        ).eval(),
+        "masked_effnet_supShal_highRes_fancy_aug": BoneAgeModel(
+            "efficientnet-b0",
+            pretrained_path="./models/masked_effnet_supShal_highRes_fancy_aug.ckpt",
+            load_dense=True,
+        ).eval(),
+        "masked_effnet-b4_shallow_pretr_fancy_aug": BoneAgeModel(
+            "efficientnet-b4",
+            pretrained_path="./models/masked_effnet-b4_shallow_pretr_fancy_aug.ckpt",
+            load_dense=True,
+        ).eval(),
+    }
+    return AgePredictor(ensemble, use_cuda=use_cuda)
+
+
+@st.cache()
+def load_sex_model(use_cuda=False) -> SexPredictor:
+    ensemble = {
+        "sex_model_mtl": SexModel.load_from_checkpoint(
+            "./models/sex_pred_model.ckpt"
+        ).eval()
+    }
+    return SexPredictor(ensemble, use_cuda=use_cuda)
 
 
 if __name__ == "__main__":
@@ -57,25 +89,41 @@ if __name__ == "__main__":
     file = st.file_uploader("Upload An Image")
 
     if file:
-        no_crop = st.checkbox("disable cropping")
-
         img = np.array(Image.open(file))
         if len(img.shape) == 3:
             img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         mask, vis = mask_predictor(img)
         mask = (mask > mask.max() // 2).astype(np.uint8)
         st.image([img, vis], caption=["Input", "Predicted Mask"], width=300)
+        no_crop = st.checkbox(
+            "Disable cropping",
+            help="Disables cropping to the mask, might be advantageous for well-centered images like the orginal RSNA images ",
+        )
 
         ignore_mask = st.checkbox(
             "Bad mask (ignore for processing)",
             help="If the hand detection did not work properly, bone age prediction can be carried out without the hand extraction step",
         )
 
-        sex = st.radio(f"Is the patient female or male?", options=["Female", "Male"],)
+        sex = st.radio(
+            f"Is the patient female or male?",
+            options=["Female", "Male", "Predict Sex"],
+        )
 
-        if st.button("Predict"):
-            sex = 1 if sex == "Male" else 0
+        if st.button("Predict Bone Age"):
             mask = None if ignore_mask else mask
+
+            if sex == "Predict Sex":
+                sex_predictor = load_sex_model(use_cuda=False)
+                with st.spinner("predicting sex"):
+                    sex, _ = sex_predictor(
+                        img, mask=mask, mask_crop=-1 if no_crop else 1.15
+                    )
+                sex = int(sex > 0.5)
+                st.write(f"Predicted to be {'male' if sex else 'female'}")
+            else:
+                sex = 1 if sex == "Male" else 0
+
             with st.spinner("performing age assessment"):
                 age, stats = age_predictor(
                     img, sex, mask=mask, mask_crop=-1 if no_crop else 1.15
