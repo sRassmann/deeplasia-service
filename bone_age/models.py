@@ -38,7 +38,6 @@ class Predictor:
         }
         with open("./bone_age/parameters.yml", "r") as stream:
             self.params = yaml.safe_load(stream)
-        self.mask_crop_size = 1.15
         self.data_aug = self.get_inference_augmentation()
         self.data_aug_highRes = self.get_inference_augmentation(height=1024, width=1024)
         self.device = "cpu"
@@ -47,8 +46,8 @@ class Predictor:
                 model.cuda()
             self.device = next(next(iter(self.models.values())).parameters()).device
 
-    def __call__(self, image, male, mask=None) -> float:
-        images = self._preprocess_image(image, mask)
+    def __call__(self, image, male, mask_crop=1.15, mask=None) -> tuple:
+        images = self._preprocess_image(image, mask, mask_crop)
         target = torch.float32  # if self.device == "cpu" else torch.float16
 
         high_res_image = images.pop().to(target).unsqueeze(dim=0).to(self.device)
@@ -62,15 +61,14 @@ class Predictor:
                     y_hat = model(high_res_image, male)
                 else:
                     y_hat = model(norm_image, male)
-                print(f"{name} : {y_hat.item()}")
                 y_hat_cor = self.cor_prediction_bias_wrapper(y_hat, name)
                 y_hats[name] = {"raw": y_hat.item(), "cor": y_hat_cor.item()}
         stats = pd.DataFrame(y_hats).T
         return stats.cor.mean(), stats
 
-    def _preprocess_image(self, image, mask):
+    def _preprocess_image(self, image, mask, mask_crop=-1.0):
         if mask is not None:
-            image = self._apply_mask(image, mask)
+            image = self._apply_mask(image, mask, mask_crop)
         else:
             image = (image / image.max() * 255).astype(np.uint8)
         images = [
@@ -86,17 +84,19 @@ class Predictor:
             proc.append(image)
         return proc
 
-    def _apply_mask(self, image, mask) -> np.ndarray:
+    def _apply_mask(self, image, mask, mask_crop) -> np.ndarray:
         """
         apply image and subtract min intensity (1st percentile) from the masked area
         """
-        image = cv2.bitwise_and(image, image, mask=mask)
+        image = image * mask
         m = np.percentile(image[image > 0], 1)
         image = cv2.subtract(image, m)  # no underflow
-        image = self._crop_to_mask(image, mask)
+        if mask_crop > 0:
+            image = self._crop_to_mask(image, mask, mask_crop)
         return image
 
-    def _crop_to_mask(self, image, mask):
+    @staticmethod
+    def _crop_to_mask(image, mask, mask_crop):
         """
         rotate and flip image, and crop to mask if specified
         """
@@ -110,7 +110,7 @@ class Predictor:
         y_center = ymin + height // 2
 
         size = max(height, width)
-        size = round(size * self.mask_crop_size)
+        size = round(size * mask_crop)
 
         xmin_new = x_center - size // 2
         xmax_new = x_center + size // 2

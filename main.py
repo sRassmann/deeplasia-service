@@ -9,6 +9,7 @@ import torch
 import streamlit as st
 import pandas as pd
 import numpy as np
+import argparse
 
 from fscnn.lib.models import MaskModel
 from fscnn.predict import Predictor as MaskPredictor
@@ -26,10 +27,24 @@ def load_age_model(use_cuda=False) -> MaskModel:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="This app lists animals")
+    parser.add_argument(
+        "--n_threads",
+        type=int,
+        default=4,
+        help="Number of threads to run inference with",
+    )
+    parser.add_argument(
+        "--use_cuda", action="store_true", help="Try to use GPU (is available)"
+    )
+    args = parser.parse_args()
+
     mask_predictor = load_fscnn()
     age_predictor = load_age_model()
 
-    if torch.cuda.is_available():
+    torch.set_num_threads(args.n_threads)
+
+    if torch.cuda.is_available() and args.use_cuda:
         if st.checkbox("use GPU"):
             st.write("Inference on GPU")
             age_predictor = load_age_model(use_cuda=True)
@@ -42,10 +57,13 @@ if __name__ == "__main__":
     file = st.file_uploader("Upload An Image")
 
     if file:
+        no_crop = st.checkbox("disable cropping")
+
         img = np.array(Image.open(file))
         if len(img.shape) == 3:
             img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         mask, vis = mask_predictor(img)
+        mask = (mask > mask.max() // 2).astype(np.uint8)
         st.image([img, vis], caption=["Input", "Predicted Mask"], width=300)
 
         ignore_mask = st.checkbox(
@@ -59,7 +77,9 @@ if __name__ == "__main__":
             sex = 1 if sex == "Male" else 0
             mask = None if ignore_mask else mask
             with st.spinner("performing age assessment"):
-                age, stats = age_predictor(img, sex, mask)
+                age, stats = age_predictor(
+                    img, sex, mask=mask, mask_crop=-1 if no_crop else 1.15
+                )
 
             st.title(f"Predicted age:")
             st.title(f"{age:.2f} months ({age / 12:.2f} years )")
