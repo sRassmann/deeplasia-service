@@ -89,7 +89,8 @@ if __name__ == "__main__":
     file = st.file_uploader("Upload an image (png or jpg)")
 
     if file:
-        img = np.array(Image.open(file))
+        file_bytes = np.asarray(bytearray(file.read()), dtype=np.uint8)
+        img = cv2.imdecode(file_bytes, 1)
         if len(img.shape) == 3:
             img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         mask, vis = mask_predictor(img)
