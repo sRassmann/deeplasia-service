@@ -25,7 +25,7 @@ Note, that custom arguments need to seperated via `--`, e.g. `$ run main.py --se
 
 ## Docker
 
-To run the application in [docker](https://www.section.io/engineering-education/how-to-deploy-streamlit-app-with-docker/):
+To run the application in [docker](https://www.section.io/engineering-education/how-to-deploy-streamlit-app-with-docker/)
 use the following command:
 
 ```bash

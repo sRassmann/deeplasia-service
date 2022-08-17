@@ -17,11 +17,11 @@ class Predictor:
         self,
         size=512,
         checkpoint="/home/rassman/bone2gene/masking/output/version_25/ckp/best_model.ckpt",
-        use_gpu=False,
+        use_cuda=False,
     ):
         self.model = MaskModel.load_from_checkpoint(checkpoint)
         self.model.eval()
-        if use_gpu:
+        if use_cuda:
             self.model.cuda()
         self.size = size
         self.aug = MaskModule.get_inference_aug(size)
@@ -85,7 +85,7 @@ def main(
     output="./output/",
     use_gpu=False,
 ):
-    p = Predictor(size, checkpoint, use_gpu=use_gpu)
+    p = Predictor(size, checkpoint, use_cuda=use_gpu)
     os.makedirs(output, exist_ok=True)
     l = (
         glob(os.path.join(input, "*.png")) + glob(os.path.join(input, "*.jpg"))

@@ -22,8 +22,10 @@ from bone_age.models import (
 
 
 @st.cache()
-def load_fscnn(path: str = "./models/fscnn_cos.ckpt") -> MaskPredictor:
-    return MaskPredictor(checkpoint=path)
+def load_mask_model(
+    path: str = "./models/fscnn_cos.ckpt", use_cuda=False
+) -> MaskPredictor:
+    return MaskPredictor(checkpoint=path, use_cuda=use_cuda)
 
 
 @st.cache()
@@ -71,7 +73,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    mask_predictor = load_fscnn()
+    mask_predictor = load_mask_model()
     age_predictor = load_age_model()
 
     torch.set_num_threads(args.n_threads)
@@ -80,9 +82,11 @@ if __name__ == "__main__":
         if st.checkbox("use GPU (experimental for prediction speed up)"):
             st.write("Inference on GPU (fast)")
             age_predictor = load_age_model(use_cuda=True)
+            mask_predictor = load_mask_model(use_cuda=True)
         else:
             st.write("Inference on CPU (slow)")
             age_predictor = load_age_model(use_cuda=False)
+            mask_predictor = load_mask_model(use_cuda=False)
 
     st.title("Bone age prediction model")
 
