@@ -22,8 +22,12 @@ class Uploader:
     def upload_image(self, img, name):
         loc_path = os.path.join(tempfile.gettempdir(), name)
         cv2.imwrite(loc_path, img)
-        self.ow.put_file(os.path.join(self.path, name), loc_path)
-        logger.info(f"uploaded file {name}")
+        try:
+            self.ow.put_file(os.path.join(self.path, name), loc_path)
+            logger.info(f"uploaded file {name}")
+        except Exception as e:
+            logger.info("upload failed")
+            logger.info(str(e))
         os.remove(loc_path)
 
     def __call__(self, img, name):

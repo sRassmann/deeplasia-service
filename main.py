@@ -68,7 +68,8 @@ def load_sex_model(use_cuda=False) -> SexPredictor:
     return SexPredictor(ensemble, use_cuda=use_cuda)
 
 
-if __name__ == "__main__":
+def main():
+    logger = logging.getLogger()
     parser = argparse.ArgumentParser(description="This app lists animals")
     parser.add_argument(
         "--n_threads",
@@ -117,7 +118,14 @@ if __name__ == "__main__":
         if uploader:
             uploader(img, name)
 
-        mask, vis = mask_predictor(img)
+        try:
+            mask, vis = mask_predictor(img)
+        except Exception as e:
+            logger.info("no mask found")
+            logger.info(str(e))
+            st.write("no mask found")
+            mask = np.ones_like(img)
+            vis = img.copy()
         mask = (mask > mask.max() // 2).astype(np.uint8)
         st.image([img, vis], caption=["Input", "Predicted Mask"], width=300)
         no_crop = st.checkbox(
@@ -165,3 +173,7 @@ if __name__ == "__main__":
                     stats.to_html(escape=False, float_format="{:20,.2f}".format),
                     unsafe_allow_html=True,
                 )
+
+
+if __name__ == "__main__":
+    main()
