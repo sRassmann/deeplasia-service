@@ -1,6 +1,13 @@
 """
 Based on https://github.com/Joshmantova/Eagle-Vision/
 """
+import logging.config
+from utils.log import LOG_CONFIG
+
+logging.config.dictConfig(LOG_CONFIG)
+
+from datetime import datetime
+
 import cv2
 from PIL import Image
 import os
@@ -19,6 +26,7 @@ from bone_age.models import (
     MultiTaskModel as SexModel,
     SexPredictor,
 )
+from utils.upload import Uploader
 
 
 @st.cache()
@@ -71,12 +79,19 @@ if __name__ == "__main__":
     parser.add_argument(
         "--use_cuda", action="store_true", help="Try to use GPU (is available)"
     )
+    parser.add_argument(
+        "--password",
+        type=str,
+        default="",
+        help="password for sciebo login (leave empty for no loggin)",
+    )
     args = parser.parse_args()
 
     mask_predictor = load_mask_model()
     age_predictor = load_age_model()
 
     torch.set_num_threads(args.n_threads)
+    uploader = Uploader(args.password) if args.password else None
 
     if torch.cuda.is_available() and args.use_cuda:
         if st.checkbox("use GPU (experimental for prediction speed up)"):
@@ -84,7 +99,7 @@ if __name__ == "__main__":
             age_predictor = load_age_model(use_cuda=True)
             mask_predictor = load_mask_model(use_cuda=True)
         else:
-            st.write("Inference on CPU (slow)")
+            st.write("Currently running inference on CPU (slow)")
             age_predictor = load_age_model(use_cuda=False)
             mask_predictor = load_mask_model(use_cuda=False)
 
@@ -93,10 +108,15 @@ if __name__ == "__main__":
     file = st.file_uploader("Upload an image (png or jpg)")
 
     if file:
+        name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".png"
+        logger.info(f"predicting file {name}")
         file_bytes = np.asarray(bytearray(file.read()), dtype=np.uint8)
         img = cv2.imdecode(file_bytes, 1)
         if len(img.shape) == 3:
             img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        if uploader:
+            uploader(img, name)
+
         mask, vis = mask_predictor(img)
         mask = (mask > mask.max() // 2).astype(np.uint8)
         st.image([img, vis], caption=["Input", "Predicted Mask"], width=300)
@@ -136,6 +156,9 @@ if __name__ == "__main__":
 
             st.title(f"Predicted age:")
             st.title(f"{age:.2f} months ({age / 12:.2f} years )")
+            logger.info(
+                f"predicted {name} as {'male' if sex else 'female'} with age {age:.2f}"
+            )
 
             with st.expander("See details"):
                 st.write(

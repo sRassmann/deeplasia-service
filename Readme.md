@@ -9,7 +9,7 @@ The [Bone Age models](https://uni-bonn.sciebo.de/apps/files/?dir=/bone2gene%20ba
 The server can be launched locally using:
 
 ```bash
-$ run main.py --server.port=8080
+$ streamlit run main.py --server.port=8080
 ```
 The port can be exposed publicly using [ngrok](https://ngrok.com/): `$ ngrok http 8080` (requires registration and setup, see their [website](https://ngrok.com/))
 
