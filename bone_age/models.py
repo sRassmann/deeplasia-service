@@ -20,7 +20,9 @@ from bone_age.effNet import EfficientNet
 
 class Predictor:
     def __init__(
-        self, ensemble, use_cuda=False,
+        self,
+        ensemble,
+        use_cuda=False,
     ):
         self.models = ensemble
         with open("./bone_age/parameters.yml", "r") as stream:
@@ -125,7 +127,8 @@ class Predictor:
             [
                 A.transforms.HorizontalFlip(p=flip),
                 A.augmentations.geometric.transforms.Affine(
-                    rotate=(rotation_angle, rotation_angle), p=1.0,
+                    rotate=(rotation_angle, rotation_angle),
+                    p=1.0,
                 ),
                 A.augmentations.crops.transforms.RandomResizedCrop(
                     width, height, scale=(1.0, 1.0), ratio=(1.0, 1.0)
@@ -163,7 +166,7 @@ class SexPredictor(Predictor):
                 # if "highRes" in name:
                 #     age_hat, y_hat = model(high_res_image, male)
                 # else:
-                age_hat, y_hat = model(norm_image, male)
+                y_hat = model(norm_image, male)
                 y_hats[name] = {"cor": torch.sigmoid(y_hat).item()}
         stats = pd.DataFrame(y_hats).T
         return stats.cor.mean(), stats
