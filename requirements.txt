@@ -17,3 +17,4 @@ opencv-python-headless==4.6.0.66
 matplotlib==3.5.2
 pytorch-lightning==1.6.5
 pyocclient==0.6
+altair<5
