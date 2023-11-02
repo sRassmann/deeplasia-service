@@ -11,3 +11,4 @@ albumentations==1.1.0
 opencv-python-headless==4.6.0.66
 pytorch-lightning==1.6.5
 Flask==3.0.0
+waitress==2.1.2

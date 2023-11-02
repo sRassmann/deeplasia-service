@@ -1,3 +1,10 @@
+import logging.config
+from utils.log import LOG_CONFIG
+
+logging.config.dictConfig(LOG_CONFIG)
+
+# TODO: add logging to file
+
 from flask import Flask, jsonify, request
 import torch
 
@@ -25,6 +32,7 @@ ensemble = {
         pretrained_path="./models/masked_effnet_super_shallow_fancy_aug.ckpt",
         load_dense=True,
     ).eval(),
+    # use only one model of the ensemble to speed up the testing for now
     # "masked_effnet_supShal_highRes_fancy_aug": BoneAgeModel(
     #     "efficientnet-b0",
     #     pretrained_path="./models/masked_effnet_supShal_highRes_fancy_aug.ckpt",
@@ -43,7 +51,7 @@ if enable_sex_prediction:
         ).eval()
     }
 
-torch.set_num_threads(threads)
+torch.set_num_threads(threads)  # define number of threads for pytorch
 mask_predictor = MaskPredictor(checkpoint=mask_model_path, use_cuda=use_cuda)
 age_predictor = AgePredictor(ensemble, use_cuda=use_cuda)
 sex_predictor = (
@@ -113,8 +121,12 @@ def predict():
 
 
 if __name__ == "__main__":
-    app.run()
+    from waitress import serve
 
+    serve(app, host="0.0.0.0", port=8080)
+
+
+# can be called as `python app.py`
 
 # with open("../data/public/Achondroplasia_Slide6.PNG", "rb") as f:
 #     image_bytes = f.read()
@@ -122,7 +134,7 @@ if __name__ == "__main__":
 
 # import requests
 
-# url = "http://localhost:5000/predict"
+# url = "http://localhost:8080/predict"
 
 # test_img = "/home/sebastian/bone2gene/data/public/Achondroplasia_Slide6.PNG"
 # files = {'file': open(test_img,'rb')}

@@ -1,27 +1,13 @@
-# Streamlit Bone age prediction app
+# Flask setup
 
-
-## Data
-The [Bone Age models](https://uni-bonn.sciebo.de/apps/files/?dir=/bone2gene%20backup/models/best_models&fileid=1922683453) and [Masking model](https://uni-bonn.sciebo.de/apps/files/?dir=/bone2gene%20backup/masks/models/pretrained_tensormask_cosine/ckp&fileid=1922659654) are available from sciebo (shareable link on request).
-
-## Run
-
-The server can be launched locally using:
+## Run in conda environment
 
 ```bash
-$ streamlit run main.py --server.port=8080
+$ conda create -n flask_ba python=3.9
+$ conda activate flask_ba
+$ pip install -r requirements.txt
+$ python app.py
 ```
-The port can be exposed publicly using [ngrok](https://ngrok.com/): `$ ngrok http 8080` (requires registration and setup, see their [website](https://ngrok.com/))
-
-### Arguments
-Apart from the [streamlit arguments](https://docs.streamlit.io/library/advanced-features/cli)
-the following custom command line arguments are supported:
- * `--n_threads` sets the number of threads PyTorch can use. Set this higher to increase the prediction speed on CPU
- * `--use_cuda` enables running inference using GPU acceleration. Note, that this requires CUDA and, differing from the stated requirements, the CUDA version of PyTorch
-
-Note, that custom arguments need to seperated via `--`, e.g. `$ run main.py --server.port=8080 -- --use_cuda`
-
-
 
 ## Docker
 
@@ -29,6 +15,17 @@ To run the application in [docker](https://www.section.io/engineering-education/
 use the following command:
 
 ```bash
-$ docker build -t bone_age_streamlit:latest .
-$ docker run -p 8080:8080 streamlitapp:latest
+$ sudo docker build -t flask_bone_age:latest .
+$ sudo docker run -p 8080:8080 flask_bone_age:latest
 ```
+
+### Limiting CPU usage
+
+To [limit the CPU usage of the docker container](https://docs.docker.com/config/containers/resource_constraints/), add the following flags to the docker run cmd:
+
+```bash
+--cpus=<number_of_cpus>
+```
+
+Note, that this should match the number of threads specified by PyTorch (`torch.set_num_threads(threads)` in `app.py`).
+
