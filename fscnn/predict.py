@@ -1,15 +1,25 @@
-import cv2
-import numpy as np
-import torch
-import os
-from glob import glob
-import matplotlib.pyplot as plt
+from albumentations.pytorch import ToTensorV2
+import albumentations as A
 
 from fscnn.lib.models import *
-from fscnn.lib.datasets import *
-from tqdm import tqdm
+import numpy as np
+import torch
+import cv2
 
-from argparse import ArgumentParser
+
+def get_inference_aug(size=512):
+    return A.Compose(
+        [
+            A.RandomResizedCrop(size, size, scale=(1.0, 1.0), ratio=(1.0, 1.0)),
+            ToTensorV2(),
+        ],
+        additional_targets={"weight": "mask"},
+    )
+
+
+def normalize_image(img: torch.Tensor) -> torch.Tensor:
+    img -= img.min()
+    return img / img.max()
 
 
 class Predictor:
@@ -24,7 +34,7 @@ class Predictor:
         if use_cuda:
             self.model.cuda()
         self.size = size
-        self.aug = MaskModule.get_inference_aug(size)
+        self.aug = get_inference_aug(size)
 
     def __call__(self, raw_image) -> np.array:
         """
@@ -41,7 +51,7 @@ class Predictor:
 
         image_crop[y : y + h, x : x + w] = raw_image
         image = self.aug(image=image_crop)["image"].unsqueeze(dim=0)
-        image = MaskDataSet.normalize(image)
+        image = normalize_image(image)
         with torch.no_grad():
             output = self.model(image.to(self.model.device))
         output = torch.softmax(output.squeeze(), dim=0)[1].cpu().numpy()
@@ -78,51 +88,54 @@ class Predictor:
         return hand, org_image
 
 
-def main(
-    input,
-    size=512,
-    checkpoint="/home/rassman/bone2gene/masking/output/version_25/ckp/best_model.ckpt",
-    output="./output/",
-    use_gpu=False,
-):
-    p = Predictor(size, checkpoint, use_cuda=use_gpu)
-    os.makedirs(output, exist_ok=True)
-    l = (
-        glob(os.path.join(input, "*.png")) + glob(os.path.join(input, "*.jpg"))
-        if os.path.isdir(input)
-        else [input]
-    )
-    for img_path in tqdm(l):
-        hand, vis = p(img_path)
-        img_path = img_path.replace(".jpg", ".png")
-        cv2.imwrite(os.path.join(output, os.path.basename(img_path)), hand)
-        cv2.imwrite(
-            os.path.join(
-                output, os.path.basename(img_path).replace(".png", "_vis.png")
-            ),
-            vis,
-        )
-
-
-if __name__ == "__main__":
-    parser = ArgumentParser()
-    parser.add_argument(
-        "--checkpoint",
-        default="/home/rassman/bone2gene/masking/output/version_25/ckp/best_model.ckpt",
-    )
-    parser.add_argument(
-        "--input",
-        default="/home/rassman/bone2gene/data/annotated/shox_magdeburg/shox_magd_00001.png",
-        help="can be eiter single image or full directory",
-    )
-    parser.add_argument(
-        "--input_size", default=512, type=int,
-    )
-    parser.add_argument(
-        "--output_dir", default="./output/masks/",
-    )
-    parser.add_argument("--use_gpu", action="store_true")
-
-    args = parser.parse_args()
-
-    main(args.input, args.input_size, args.checkpoint, args.output_dir, args.use_gpu)
+# def main(
+#     input,
+#     size=512,
+#     checkpoint="/home/rassman/bone2gene/masking/output/version_25/ckp/best_model.ckpt",
+#     output="./output/",
+#     use_gpu=False,
+# ):
+#     p = Predictor(size, checkpoint, use_cuda=use_gpu)
+#     os.makedirs(output, exist_ok=True)
+#     l = (
+#         glob(os.path.join(input, "*.png")) + glob(os.path.join(input, "*.jpg"))
+#         if os.path.isdir(input)
+#         else [input]
+#     )
+#     for img_path in tqdm(l):
+#         hand, vis = p(img_path)
+#         img_path = img_path.replace(".jpg", ".png")
+#         cv2.imwrite(os.path.join(output, os.path.basename(img_path)), hand)
+#         cv2.imwrite(
+#             os.path.join(
+#                 output, os.path.basename(img_path).replace(".png", "_vis.png")
+#             ),
+#             vis,
+#         )
+#
+#
+# if __name__ == "__main__":
+#     parser = ArgumentParser()
+#     parser.add_argument(
+#         "--checkpoint",
+#         default="/home/rassman/bone2gene/masking/output/version_25/ckp/best_model.ckpt",
+#     )
+#     parser.add_argument(
+#         "--input",
+#         default="/home/rassman/bone2gene/data/annotated/shox_magdeburg/shox_magd_00001.png",
+#         help="can be eiter single image or full directory",
+#     )
+#     parser.add_argument(
+#         "--input_size",
+#         default=512,
+#         type=int,
+#     )
+#     parser.add_argument(
+#         "--output_dir",
+#         default="./output/masks/",
+#     )
+#     parser.add_argument("--use_gpu", action="store_true")
+#
+#     args = parser.parse_args()
+#
+#     main(args.input, args.input_size, args.checkpoint, args.output_dir, args.use_gpu)

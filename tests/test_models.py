@@ -1,15 +1,12 @@
 import cv2
 from PIL import Image
 import os
-import torch
 
-import streamlit as st
 import pandas as pd
 import numpy as np
 
 from tqdm import tqdm
 
-from fscnn.lib.models import MaskModel
 from fscnn.predict import Predictor as MaskPredictor
 from bone_age.models import (
     EfficientModel as BoneAgeModel,

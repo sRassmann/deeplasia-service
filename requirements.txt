@@ -4,17 +4,10 @@
 torch==1.10.0+cpu
 torchvision==0.11.0+cpu
 
-#These other packages can be found on PyPi
-streamlit==1.11.1
 Pillow==9.0.0
 pandas==1.4.3
 tqdm==4.62.3
 albumentations==1.1.0
-scikit-learn==1.1.2
-scipy
-scikit-image
 opencv-python-headless==4.6.0.66
-matplotlib==3.5.2
 pytorch-lightning==1.6.5
-pyocclient==0.6
-altair<5
+Flask==3.0.0

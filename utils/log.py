@@ -2,8 +2,6 @@
 utility funcs for logging
 """
 
-from os import path
-import logging
 import torch
 import albumentations
 import sys, os
@@ -62,7 +60,10 @@ LOG_CONFIG = {
         }
     },
     # Just a standalone kwarg for the root logger
-    "root": {"level": "INFO", "handlers": ["console", "file"],},
+    "root": {
+        "level": "INFO",
+        "handlers": ["console", "file"],
+    },
 }
 
 
