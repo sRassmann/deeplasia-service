@@ -15,8 +15,8 @@ To run the application in [docker](https://www.section.io/engineering-education/
 use the following command:
 
 ```bash
-sudo docker build -t flask_bone_age:latest .
-sudo docker run -p 8080:8080 flask_bone_age:latest
+sudo docker build -t flask_bone_age .
+sudo docker run -p 8080:8080 -v ./models:/app/models deeplasia-service
 ```
 
 ### Limiting CPU usage
