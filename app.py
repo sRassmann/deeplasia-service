@@ -5,7 +5,7 @@ logging.config.dictConfig(LOG_CONFIG)
 
 # TODO: add logging to file
 
-from flask import Flask, jsonify, request
+from flask import abort, Flask, request
 import torch
 
 import numpy as np
@@ -98,26 +98,24 @@ def get_prediction(image_bytes, sex, use_mask):
     return age.item(), sex, sex_predicted
 
 
-@app.route("/predict", methods=["POST"])
+@app.post("/predict")
 def predict():
-    if request.method == "POST":
-        if "file" not in request.files:
-            print("no file")
-            return jsonify({"error": "No file part"})
-        file = request.files["file"]
-        image_bytes = file.read()
+    if "file" not in request.files:
+        abort(400, "No file provided!")
 
-        sex = request.form.get("sex")
-        use_mask = request.form.get("use_mask")
+    file = request.files["file"]
+    image_bytes = file.read()
 
-        bone_age, sex, sex_predicted = get_prediction(image_bytes, sex, use_mask)
-        return jsonify(
-            {
-                "bone_age": bone_age,
-                "used_sex": sex,
-                "sex_predicted": sex_predicted,
-            }
-        )
+    sex = request.form.get("sex")
+    use_mask = request.form.get("use_mask")
+
+    bone_age, sex, sex_predicted = get_prediction(image_bytes, sex, use_mask)
+
+    return {
+        "bone_age": bone_age,
+        "used_sex": sex,
+        "sex_predicted": sex_predicted,
+    }
 
 
 if __name__ == "__main__":
