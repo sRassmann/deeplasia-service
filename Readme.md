@@ -3,10 +3,10 @@
 ## Run in conda environment
 
 ```bash
-$ conda create -n flask_ba python=3.9
-$ conda activate flask_ba
-$ pip install -r requirements.txt
-$ python app.py
+conda create -n flask_ba python=3.9
+conda activate flask_ba
+pip install -r requirements.txt
+python app.py
 ```
 
 ## Docker
@@ -15,8 +15,8 @@ To run the application in [docker](https://www.section.io/engineering-education/
 use the following command:
 
 ```bash
-$ sudo docker build -t flask_bone_age:latest .
-$ sudo docker run -p 8080:8080 flask_bone_age:latest
+sudo docker build -t flask_bone_age:latest .
+sudo docker run -p 8080:8080 flask_bone_age:latest
 ```
 
 ### Limiting CPU usage
@@ -33,29 +33,33 @@ Note, that this should match the number of threads specified by PyTorch (`torch.
 
 ## Request
 
-On python the request can be conducted as follows:
+In python the request can be conducted as follows:
 
 ```python
 import requests
 
 url = "http://localhost:8080/predict"
 
-test_img = "/home/rassman/bone2gene/data/annotated/ACh/ach_00001.png"
-files = {'file': open(test_img,'rb')}
+test_img = "/path/to/xray.png"
+files = { "file": open(test_img, "rb") }
 
 data = {
     "sex": "female",  # specify if known, else is predicted
-    "use_mask": "1"  # 1 for True, 0 for False, default is 1
+    "use_mask": True  # default is true
 }
 
-resp = requests.post(url, files=files, data=data)
+resp = requests.post(url, files=files, json=data)
 resp.json()
 ```
 
 Gives something like:
 
-```json lines
-{'bone_age': 164.9562530517578, 'sex_predicted': False, 'used_sex': 'f'}
+```json
+{
+    "bone_age": 164.9562530517578,
+    "sex_predicted": false,
+    "used_sex": "female"
+}
 ```
 
 So the canonical way would be as described above, with using the predicted mask and specifying the sex.

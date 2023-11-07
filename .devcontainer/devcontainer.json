@@ -13,7 +13,8 @@
             "extensions": [
                 "ms-python.python",
                 "ms-azuretools.vscode-docker",
-                "mhutchie.git-graph"
+                "mhutchie.git-graph",
+                "42Crunch.vscode-openapi"
             ]
         }
     }
