@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Deeplasia API
+  title: Deeplasia Service API
   version: 0.1.0
   description: This is the OpenAPI specification of the Deeplasia bone age assessment service.
   license:
@@ -74,12 +74,12 @@ components:
           description: Whether to apply a mask before predicting bone age.
           type: boolean
           default: true
-        fileName:
+        file:
           description: The X-ray image.
           type: string
           format: binary
       required:
-        - fileName
+        - file
 tags:
   - name: boneAge
     description: Everything about bone age predictions.

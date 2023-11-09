@@ -5,7 +5,7 @@ logging.config.dictConfig(LOG_CONFIG)
 
 # TODO: add logging to file
 
-from flask import abort, Flask, request
+from flask import abort, Flask, request, Response
 import torch
 
 import numpy as np
@@ -117,6 +117,11 @@ def predict():
         "sex_predicted": sex_predicted,
     }
 
+@app.get("/")
+def ping():
+    with open("deeplasia-api.yml", "r") as f:
+        return Response(f.read(), mimetype="application/json")
+    abort(404, "Not found!")
 
 if __name__ == "__main__":
     from waitress import serve
