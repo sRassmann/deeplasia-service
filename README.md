@@ -8,7 +8,7 @@ Please refer for more information:
 * http://www.deeplasia.de/
 * https://github.com/aimi-bonn/Deeplasia
 
-[![Build Docker Image](https://github.com/CrescNet/deeplasia-service/actions/workflows/build.yml/badge.svg)](https://github.com/CrescNet/deeplasia-service/actions/workflows/build.yml)
+[![Build Docker Image](https://github.com/sRassmann/bone-age-streamlit/actions/workflows/build.yml/badge.svg)](https://github.com/sRassmann/bone-age-streamlit/actions/workflows/build.yml)
 
 ## How to Use
 
@@ -42,7 +42,7 @@ python flask run
 You can use our pre built Docker image to run the application:
 
 ```sh
-docker run -p 8080:8080 -v ./models:/app/models ghcr.io/crescnet/deeplasia-service
+docker run -p 8080:8080 -v ./models:/app/models ghcr.io/srassmann/bone-age-streamlit
 ```
 
 Or you can build the image yourself (clone this repository first):
@@ -67,12 +67,12 @@ Note, that this should match the number of threads specified with environment va
 e.g.:
 
 ```sh
-docker run -p 8080:8080 --cpus=2 -e "DEEPLASIA_THREADS=2" -v ./models:/app/models ghcr.io/crescnet/deeplasia-service
+docker run -p 8080:8080 --cpus=2 -e "DEEPLASIA_THREADS=2" -v ./models:/app/models ghcr.io/srassmann/bone-age-streamlit
 ```
 
 ## API
 
-[![Swagger UI](https://img.shields.io/badge/-Swagger%20UI-%23Clojure?style=flat&logo=swagger&logoColor=white)](https://crescnet.github.io/deeplasia-service/)
+[![Swagger UI](https://img.shields.io/badge/-Swagger%20UI-%23Clojure?style=flat&logo=swagger&logoColor=white)](https://srassmann.github.io/bone-age-streamlit/)
 
 Please refer to `deeplasia-api.yml` for an [OpenAPI](https://www.openapis.org/) specification of the API.
 
@@ -120,4 +120,4 @@ We might think about storing the masks as a visual control as well as logging fe
 
 ## License
 
-The code in this repository and the image `deeplasia-service` are licensed under CC BY-NC-SA 4.0 DEED.
+The code in this repository and the image `bone-age-streamlit` are licensed under CC BY-NC-SA 4.0 DEED.
