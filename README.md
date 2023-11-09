@@ -1,37 +1,82 @@
-# Flask setup
+# Deeplasia Service
 
-## Run in conda environment
+Deeplasia is a prior-free deep learning approach to asses bone age in children and adolescents.
+This repository contains a RESTfull service with a simple API to process X-ray images and predict bone age in months.
 
-```bash
+Please refer for more information:
+
+* http://www.deeplasia.de/
+* https://github.com/aimi-bonn/Deeplasia
+
+[![Build Docker Image](https://github.com/CrescNet/deeplasia-service/actions/workflows/build.yml/badge.svg)](https://github.com/CrescNet/deeplasia-service/actions/workflows/build.yml)
+
+## How to Use
+
+In order to run this application, you must provide the deep learning models. Please contact use to get them.
+
+Use the environment variable `DEEPLASIA_THREADS` to limit the number of threads used by [PyTorch](https://pytorch.org/) (defaults to 4 threads).
+
+### Run in Conda Environment
+
+**Requirements:**
+
+* [Conda](https://docs.conda.io) must be installed
+* Deep learning models are located in the directory `./models`
+
+Run the following CLI commands and navigate to <http://localhost:5000/>.
+
+```sh
 conda create -n flask_ba python=3.9
 conda activate flask_ba
 pip install -r requirements.txt
-python app.py
+python flask run 
 ```
 
-## Docker
+### Run with Docker
 
-To run the application in [docker](https://www.section.io/engineering-education/how-to-deploy-streamlit-app-with-docker/)
-use the following command:
+**Requirements:**
+
+* [Docker](https://docs.docker.com/engine/install/) must be installed
+* Deep learning models are not included in the image and must be mounted on container start
+
+You can use our pre built Docker image to run the application:
+
+```sh
+docker run -p 8080:8080 -v ./models:/app/models ghcr.io/crescnet/deeplasia-service
+```
+
+Or you can build the image yourself (clone this repository first):
 
 ```bash
-sudo docker build -t flask_bone_age .
-sudo docker run -p 8080:8080 -v ./models:/app/models deeplasia-service
+docker build -t deeplasia-service .
+docker run -p 8080:8080 -v ./models:/app/models deeplasia-service
 ```
 
-### Limiting CPU usage
+Navigate to <http://localhost:8080/>
+
+#### Limiting CPU usage
 
 To [limit the CPU usage of the docker container](https://docs.docker.com/config/containers/resource_constraints/), add the following flags to the docker run cmd:
 
-```bash
+```sh
 --cpus=<number_of_cpus>
 ```
 
-Note, that this should match the number of threads specified by PyTorch (`torch.set_num_threads(threads)` in `app.py`).
+Note, that this should match the number of threads specified with environment variable `DEEPLASIA_THREADS`.
 
-# API
+e.g.:
 
-## Request
+```sh
+docker run -p 8080:8080 --cpus=2 -e "DEEPLASIA_THREADS=2" -v ./models:/app/models ghcr.io/crescnet/deeplasia-service
+```
+
+## API
+
+[![Swagger UI](https://img.shields.io/badge/-Swagger%20UI-%23Clojure?style=flat&logo=swagger&logoColor=white)](https://crescnet.github.io/deeplasia-service/)
+
+Please refer to `deeplasia-api.yml` for an [OpenAPI](https://www.openapis.org/) specification of the API.
+
+### Request
 
 In python the request can be conducted as follows:
 
@@ -62,7 +107,17 @@ Gives something like:
 }
 ```
 
-So the canonical way would be as described above, with using the predicted mask and specifying the sex.
+## Predicting Sex
+
+The canonical way would be as described in previous sections, with using the predicted mask and specifying the sex.
 If, however, the sex happens to be unknown (or unsure for e.g. errors of inserting the data) the sex can also be predicted.
-Skipping the masking by the predicted mask is meant to be a debugging feature, if the results with the mask are not convincing (e.g. predicting 127 months as age), one could re-conduct bone age prediction without the mask and see if makes a difference. 
+
+## Usage of Masks
+
+Skipping the masking by the predicted mask is meant to be a debugging feature, if the results with the mask are not convincing
+(e.g. predicting 127 months as age), one could re-conduct bone age prediction without the mask and see if makes a difference.
 We might think about storing the masks as a visual control as well as logging features in general in the future.
+
+## License
+
+The code in this repository and the image `deeplasia-service` are licensed under CC BY-NC-SA 4.0 DEED.

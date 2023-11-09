@@ -1,5 +1,7 @@
 FROM python:3.9-slim
 
+ENV DEEPLASIA_THREADS=4
+
 # If your company uses a self-signed CA:
 # ENV PIP_TRUSTED_HOST=download.pytorch.org
 

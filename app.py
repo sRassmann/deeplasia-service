@@ -19,11 +19,13 @@ from bone_age.models import (
     SexPredictor,
 )
 
+import os
+
 app = Flask(__name__)
 
 use_cuda = torch.cuda.is_available()
 enable_sex_prediction = True
-threads = 4
+threads = int(os.getenv('DEEPLASIA_THREADS', 4))
 
 mask_model_path = "./models/fscnn_cos.ckpt"
 ensemble = {
