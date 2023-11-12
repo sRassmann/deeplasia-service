@@ -1,18 +1,17 @@
-FROM python:3.9
-# easier base image ?
+FROM python:3.9-slim
 
-COPY . /app
+ENV DEEPLASIA_THREADS=4
+
+# If your company uses a self-signed CA:
+# ENV PIP_TRUSTED_HOST=download.pytorch.org
 
 WORKDIR /app
 
-RUN ["apt-get", "update"]
-RUN ["apt-get", "-y", "install", "vim"]
-
-#Install necessary packages from requirements.txt with no cache dir allowing for installation on machine with very little memory on board
+COPY requirements.txt /app/.
 RUN pip install -r requirements.txt
 
-#Exposing the default waitress port
+COPY . /app
+
 EXPOSE 8080
 
-#Running the streamlit app
-CMD ["python", "app.py"]
+CMD [ "waitress-serve", "app:app"]

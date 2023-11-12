@@ -1,0 +1,85 @@
+openapi: 3.0.3
+info:
+  title: Deeplasia Service API
+  version: 0.1.0
+  description: This is the OpenAPI specification of the Deeplasia bone age assessment service.
+  license:
+    name: CC BY-NC-SA 4.0 DEED
+    url: 'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en'
+servers:
+  - url: 'http://localhost:8080'
+    description: Localhost instance.
+  - url: 'http://host.docker.internal:8080'
+    description: In case the server is running on the Docker host.
+paths:
+  /predict:
+    post:
+      summary: Send an X-ray image with additional configurations to get a bone age prediction.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PredictionInput'
+      responses:
+        '200':
+          description: The result of the bone age prediction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoneAgePrediction'
+        '400':
+          description: Bad request.
+        '500':
+          description: Internal server error.
+      tags:
+        - boneAge
+components:
+  schemas:
+    BoneAgePrediction:
+      description: Result of a bone age prediction.
+      type: object
+      properties:
+        bone_age:
+          description: The predicted bone age in months.
+          type: number
+          format: double
+          example: 164.9562530517578
+        sex_predicted:
+          description: Whether the sex that was used for the prediction was also predicted or given in the configurations.
+          type: boolean
+          example: false
+        used_sex:
+          description: The sex that was used for the prediction.
+          type: string
+          enum:
+            - female
+            - male
+      required:
+        - bone_age
+        - sex_predicted
+        - used_sex
+    PredictionInput:
+      description: Input to perform a bone age prediction.
+      type: object
+      properties:
+        sex:
+          description: |
+            The sex of the person of whom the X-ray image was taken.
+            If not specified, sex is also predicted.
+          type: string
+          enum:
+            - female
+            - male
+        use_mask:
+          description: Whether to apply a mask before predicting bone age.
+          type: boolean
+          default: true
+        file:
+          description: The X-ray image.
+          type: string
+          format: binary
+      required:
+        - file
+tags:
+  - name: boneAge
+    description: Everything about bone age predictions.

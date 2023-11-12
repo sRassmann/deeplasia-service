@@ -5,7 +5,7 @@ logging.config.dictConfig(LOG_CONFIG)
 
 # TODO: add logging to file
 
-from flask import Flask, jsonify, request
+from flask import abort, Flask, request, Response
 import torch
 
 import numpy as np
@@ -19,11 +19,13 @@ from bone_age.models import (
     SexPredictor,
 )
 
+import os
+
 app = Flask(__name__)
 
 use_cuda = torch.cuda.is_available()
 enable_sex_prediction = True
-threads = 4
+threads = int(os.getenv('DEEPLASIA_THREADS', 4))
 
 mask_model_path = "./models/fscnn_cos.ckpt"
 ensemble = {
@@ -98,32 +100,33 @@ def get_prediction(image_bytes, sex, use_mask):
     return age.item(), sex, sex_predicted
 
 
-@app.route("/predict", methods=["POST"])
+@app.post("/predict")
 def predict():
-    if request.method == "POST":
-        if "file" not in request.files:
-            print("no file")
-            return jsonify({"error": "No file part"})
-        file = request.files["file"]
-        image_bytes = file.read()
+    if "file" not in request.files:
+        abort(400, "No file provided!")
 
-        sex = request.form.get("sex")
-        use_mask = request.form.get("use_mask")
+    file = request.files["file"]
+    image_bytes = file.read()
 
-        bone_age, sex, sex_predicted = get_prediction(image_bytes, sex, use_mask)
-        return jsonify(
-            {
-                "bone_age": bone_age,
-                "used_sex": sex,
-                "sex_predicted": sex_predicted,
-            }
-        )
+    sex = request.form.get("sex")
+    use_mask = request.form.get("use_mask")
 
+    bone_age, sex, sex_predicted = get_prediction(image_bytes, sex, use_mask)
+
+    return {
+        "bone_age": bone_age,
+        "used_sex": sex,
+        "sex_predicted": sex_predicted,
+    }
+
+@app.get("/")
+def ping():
+    with open("deeplasia-api.yml", "r") as f:
+        return Response(f.read(), mimetype="application/json")
+    abort(404, "Not found!")
 
 if __name__ == "__main__":
-    from waitress import serve
-
-    serve(app, host="0.0.0.0", port=8080)
+    app.run()
 
 
 # can be called as `python app.py`

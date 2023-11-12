@@ -81,3 +81,5 @@ modesl/*
 
 /imgs/*
 /models/*
+
+*.env
