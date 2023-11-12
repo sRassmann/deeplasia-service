@@ -8,11 +8,11 @@ Please refer for more information:
 * http://www.deeplasia.de/
 * https://github.com/aimi-bonn/Deeplasia
 
-[![Build Docker Image](https://github.com/sRassmann/bone-age-streamlit/actions/workflows/build.yml/badge.svg)](https://github.com/sRassmann/bone-age-streamlit/actions/workflows/build.yml)
+[![Build Docker Image](https://github.com/sRassmann/deeplasia-service/actions/workflows/build.yml/badge.svg)](https://github.com/sRassmann/deeplasia-service/actions/workflows/build.yml)
 
 ## How to Use
 
-In order to run this application, you must provide the deep learning models. Please contact use to get them.
+In order to run this application, you must provide the deep learning models. Please contact us to get them.
 
 Use the environment variable `DEEPLASIA_THREADS` to limit the number of threads used by [PyTorch](https://pytorch.org/) (defaults to 4 threads).
 
@@ -37,12 +37,12 @@ python flask run
 **Requirements:**
 
 * [Docker](https://docs.docker.com/engine/install/) must be installed
-* Deep learning models are not included in the image and must be mounted on container start
+* Deep learning models are not included in the image and must be mounted on the container start
 
-You can use our pre built Docker image to run the application:
+You can use our pre-built Docker image to run the application:
 
 ```sh
-docker run -p 8080:8080 -v ./models:/app/models ghcr.io/srassmann/bone-age-streamlit
+docker run -p 8080:8080 -v ./models:/app/models ghcr.io/srassmann/deeplasia-service
 ```
 
 Or you can build the image yourself (clone this repository first):
@@ -67,12 +67,12 @@ Note, that this should match the number of threads specified with environment va
 e.g.:
 
 ```sh
-docker run -p 8080:8080 --cpus=2 -e "DEEPLASIA_THREADS=2" -v ./models:/app/models ghcr.io/srassmann/bone-age-streamlit
+docker run -p 8080:8080 --cpus=2 -e "DEEPLASIA_THREADS=2" -v ./models:/app/models ghcr.io/srassmann/deeplasia-service
 ```
 
 ## API
 
-[![Swagger UI](https://img.shields.io/badge/-Swagger%20UI-%23Clojure?style=flat&logo=swagger&logoColor=white)](https://srassmann.github.io/bone-age-streamlit/)
+[![Swagger UI](https://img.shields.io/badge/-Swagger%20UI-%23Clojure?style=flat&logo=swagger&logoColor=white)](https://srassmann.github.io/deeplasia-service)
 
 Please refer to `deeplasia-api.yml` for an [OpenAPI](https://www.openapis.org/) specification of the API.
 
@@ -109,8 +109,8 @@ Gives something like:
 
 ## Predicting Sex
 
-The canonical way would be as described in previous sections, with using the predicted mask and specifying the sex.
-If, however, the sex happens to be unknown (or unsure for e.g. errors of inserting the data) the sex can also be predicted.
+The canonical way would be as described in previous sections, using the predicted mask and specifying the sex.
+If, however, the sex happens to be unknown (or unsure for e.g. errors during inserting the data) the sex can also be predicted.
 
 ## Usage of Masks
 
@@ -120,4 +120,4 @@ We might think about storing the masks as a visual control as well as logging fe
 
 ## License
 
-The code in this repository and the image `bone-age-streamlit` are licensed under CC BY-NC-SA 4.0 DEED.
+The code in this repository and the image `deeplasia-service` are licensed under CC BY-NC-SA 4.0 DEED.
