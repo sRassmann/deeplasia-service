@@ -12,8 +12,6 @@ Please refer for more information:
 
 ## How to Use
 
-In order to run this application, you must provide the deep learning models. Please contact us to get them.
-
 Use the environment variable `DEEPLASIA_THREADS` to limit the number of threads used by [PyTorch](https://pytorch.org/) (defaults to 4 threads).
 
 ### Run in Conda Environment
