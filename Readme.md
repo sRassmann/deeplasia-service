@@ -19,7 +19,7 @@ the following custom command line arguments are supported:
  * `--n_threads` sets the number of threads PyTorch can use. Set this higher to increase the prediction speed on CPU
  * `--use_cuda` enables running inference using GPU acceleration. Note, that this requires CUDA and, differing from the stated requirements, the CUDA version of PyTorch
 
-Note, that custom arguments need to seperated via `--`, e.g. `$ run main.py --server.port=8080 -- --use_cude`
+Note, that custom arguments need to seperated via `--`, e.g. `$ run main.py --server.port=8080 -- --use_cuda`
 
 
 
@@ -30,5 +30,5 @@ use the following command:
 
 ```bash
 $ docker build -t bone_age_streamlit:latest .
-$ docker run -p 8080:8080 streamlitapp:latest
+$ docker run -p 8080:8080 bone_age_streamlit:latest
 ```
